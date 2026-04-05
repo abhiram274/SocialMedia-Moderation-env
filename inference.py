@@ -29,8 +29,8 @@ from env.social_mod_env import Action, ModerationAction, SocialModEnv
 # ─── Config ────────────────────────────────────────────────────────────────────
 API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
 MODEL_NAME   = os.getenv("MODEL_NAME",   "Qwen/Qwen2.5-72B-Instruct")
-HF_TOKEN     = os.getenv("HF_TOKEN", "")
-API_KEY      = HF_TOKEN or os.getenv("OPENAI_API_KEY", "hf_placeholder")
+HF_TOKEN     = os.getenv("HF_TOKEN")
+API_KEY = HF_TOKEN
 
 BENCHMARK  = "socialmodenv"
 MAX_STEPS  = 20

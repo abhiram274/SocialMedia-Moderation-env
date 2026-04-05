@@ -148,6 +148,13 @@ def state(task_name: str = "spam_triage"):
         )
     return _envs[task_name].state()
 
+@app.get("/")
+def root():
+    return {
+        "message": "SocialModEnv API is running",
+        "endpoints": ["/health", "/tasks", "/reset", "/step", "/state"]
+    }
+
 
 # Entry point for local running
 def main():
