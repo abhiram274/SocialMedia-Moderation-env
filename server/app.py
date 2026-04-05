@@ -8,6 +8,7 @@ from typing import Any, Dict, Optional
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from typing import Optional
 
 from env.social_mod_env import (
     Action,
@@ -96,8 +97,12 @@ def list_tasks():
     }
 
 
+
 @app.post("/reset")
-def reset(req: ResetRequest):
+def reset(req: Optional[ResetRequest] = None):
+    if req is None:
+        req = ResetRequest()
+
     env = SocialModEnv(task_name=req.task_name, seed=req.seed)
     _envs[req.task_name] = env
     obs = env.reset()
