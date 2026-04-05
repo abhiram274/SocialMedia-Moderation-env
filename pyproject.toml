@@ -1,0 +1,20 @@
+[project]
+name = "socialmodenv"
+version = "1.0.0"
+description = "Content moderation RL environment"
+authors = [{ name = "Your Name" }]
+requires-python = ">=3.10"
+
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "pydantic",
+    "openai",
+    "openenv-core>=0.2.0"
+]
+
+[project.scripts]
+server = "server.app:main"
+
+[tool.setuptools]
+packages = ["env"]

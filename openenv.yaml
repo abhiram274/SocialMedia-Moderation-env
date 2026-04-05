@@ -1,0 +1,114 @@
+name: SocialModEnv
+version: "1.0.0"
+description: >
+  Content Moderation Policy Simulation — an RL environment where agents act as
+  moderation policy engines for a synthetic social media platform. Agents balance
+  safety, free expression, creator monetization, and detection of coordinated
+  inauthentic behavior across three tasks of increasing difficulty.
+
+tags:
+  - openenv
+  - content-moderation
+  - social-media
+  - policy
+  - real-world
+  - multi-objective
+
+author: "SocialModEnv Team"
+license: MIT
+
+tasks:
+  - name: spam_triage
+    difficulty: easy
+    max_steps: 20
+    reward_range: [0.0, 1.0]
+    description: >
+      Binary spam triage. Classify obvious spam vs. legitimate content.
+      Grader measures precision and recall against synthetic ground truth.
+    expected_score_range: [0.70, 0.92]
+
+  - name: policy_nuance
+    difficulty: medium
+    max_steps: 20
+    reward_range: [0.0, 1.0]
+    description: >
+      Gray-zone moderation requiring policy document comprehension.
+      Posts live near category boundaries — satire, news violence,
+      political commentary. Partial credit for near-misses.
+    expected_score_range: [0.40, 0.72]
+
+  - name: coordinated_inauthentic
+    difficulty: hard
+    max_steps: 30
+    reward_range: [0.0, 1.0]
+    description: >
+      Detect coordinated inauthentic behavior (CIB) networks.
+      Individual posts may seem borderline. Agent must identify network
+      patterns across a sliding window and use the BAN_NETWORK action
+      to action entire clusters.
+    expected_score_range: [0.25, 0.48]
+
+observation_space:
+  type: structured
+  fields:
+    - name: step
+      type: int
+    - name: current_post
+      type: object
+      description: Post content, author metadata, engagement signals
+    - name: policy_document
+      type: str
+      description: Full community standards policy text
+    - name: history_summary
+      type: object
+      description: Running count of each action taken this episode
+    - name: network_signals
+      type: array
+      nullable: true
+      description: "Task 3 only: sliding window of recent 10 posts for network analysis"
+    - name: task_name
+      type: str
+    - name: max_steps
+      type: int
+
+action_space:
+  type: discrete
+  actions:
+    - allow
+    - label
+    - demote
+    - remove
+    - escalate
+    - ban_network
+
+reward:
+  type: shaped
+  range: [0.0, 1.0]
+  description: >
+    Multi-objective shaped reward combining:
+    (1) Base accuracy against ground-truth annotations
+    (2) Safety bonus for correctly removing harmful content
+    (3) Expression penalty for over-removing legitimate content
+    (4) Creator penalty for removing monetized creator content without cause
+    (5) Consistency penalty for applying policy inconsistently
+    (6) Lazy-policy penalty for degenerate always-one-action strategies
+
+environment:
+  reset_produces_clean_state: true
+  episode_termination: fixed_steps
+  deterministic_given_seed: true
+  seed_param: seed
+
+api:
+  reset: POST /reset
+  step: POST /step
+  state: GET /state
+  tasks: GET /tasks
+  health: GET /health
+
+runtime:
+  language: python
+  python_version: "3.11"
+  framework: fastapi
+  inference_time_limit_minutes: 20
+  memory_limit_gb: 8
