@@ -419,8 +419,12 @@ def call_llm(messages: list) -> str:
             max_tokens=MAX_TOKENS,
         )
         return resp.choices[0].message.content.strip()
+    #llm call can fail due to rate limits, timeouts, or other issues. We catch all exceptions to ensure the script continues and we can log the error.
     except Exception as e:
-        return json.dumps({"action": "escalate", "reason": f"LLM error: {e}"})
+        return json.dumps({
+            "action": "label",
+            "reason": f"LLM error fallback: {e}"
+        })
 
 
 # Action parser - robust extraction from CoT output 
@@ -528,6 +532,7 @@ def run_task(task_name: str) -> dict:
  
             act_str = action.action if isinstance(action.action, str) else action.action.value
             next_obs, reward, done, info = env.step(action)
+            reward = max(0.01, min(0.99, reward))
             obs_dict = next_obs.model_dump()
             steps += 1
             rewards.append(reward)
@@ -545,18 +550,22 @@ def run_task(task_name: str) -> dict:
  
     finally:
         # stdout: [END] — always emitted even on exception
-        success     = (sum(rewards) / len(rewards)) >= 0.6 if rewards else False
+        avg = sum(rewards) / len(rewards) if rewards else 0.0
+        avg = max(0.01, min(0.99, avg))
+        success = avg >= 0.6
         rewards_str = ",".join(f"{r:.2f}" for r in rewards) if rewards else "0.00"
         print(
             f"[END] success={str(success).lower()} steps={steps} rewards={rewards_str}",
             flush=True,
         )
+    mean_reward = sum(rewards) / len(rewards) if rewards else 0.0
+    mean_reward = max(0.01, min(0.99, mean_reward))
  
     return {
         "task":        task_name,
         "success":     success,
         "steps":       steps,
-        "mean_reward": sum(rewards) / len(rewards) if rewards else 0.0,
+        "mean_reward": mean_reward,
         "rewards":     rewards,
     }
 
