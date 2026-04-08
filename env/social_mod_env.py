@@ -606,6 +606,7 @@ class SocialModEnv:
 
         # Grade the action
         reward_val, reason = self._grade(current_post, action)
+        reward_val = clamp_score(reward_val)
 
         # Consistency penalty — same post_type getting wildly different actions
         consistency_penalty = self._compute_consistency_penalty(action)
@@ -635,7 +636,8 @@ class SocialModEnv:
             "post_id": current_post.post_id,
             "episode_mean_reward": clamp_score(sum(self._episode_scores) / len(self._episode_scores)),
         }
-
+        
+        shaped = clamp_score(shaped)
         return obs, shaped, self._done, info
 
     def state(self) -> Dict[str, Any]:
@@ -706,7 +708,7 @@ class SocialModEnv:
         If the same author_type was actioned differently before, apply a small penalty.
         """
         if len(self._action_history) < 3:
-            return 0.0
+            return clamp_score(0.0)
 
         current_post = self._posts[self._step_idx]
         author_type = current_post.metadata.get("author_type", "unknown")
@@ -724,7 +726,7 @@ class SocialModEnv:
                     past_actions_for_type.append(past_act)
 
         if not past_actions_for_type:
-            return 0.0
+            return clamp_score(0.0)
 
         current_act = action.action
         if isinstance(current_act, ModerationAction):
@@ -732,9 +734,9 @@ class SocialModEnv:
 
         # If current action differs from past actions for same post type → small penalty
         if current_act not in past_actions_for_type:
-            return 0.05
+            return clamp_score(0.05)
 
-        return 0.0
+        return clamp_score(0.0)
 
     def _shape_reward(self, base: float, post: Post, action: Action,
                       consistency_penalty: float) -> float:
