@@ -532,14 +532,15 @@ def run_task(task_name: str) -> dict:
  
             act_str = action.action if isinstance(action.action, str) else action.action.value
             next_obs, reward, done, info = env.step(action)
+            reward = max(1e-6, min(reward, 1 - 1e-6))
             obs_dict = next_obs.model_dump()
             steps += 1
             rewards.append(reward)
  
-            # stdout: [STEP]
+            # stdout: [STEP] — FIXED: use :.6f so reward never prints as 0.00 or 1.00
             print(
                 f"[STEP] step={steps} action={act_str} "
-                f"reward={reward:.2f} done={str(done).lower()} "
+                f"reward={reward:.6f} done={str(done).lower()} "
                 f"error={parse_error if parse_error else 'null'}",
                 flush=True,
             )
@@ -554,8 +555,8 @@ def run_task(task_name: str) -> dict:
         success = avg >= 0.6
         rewards_str = ",".join(f"{r:.6f}" for r in rewards) if rewards else f"{1e-6:.6f}"
         print(
-            f"[END] success={str(success).lower()} steps={steps} rewards={rewards_str}",
-            flush=True,
+            f"[END] success={str(success).lower()} steps={steps} "
+            f"score={avg:.6f} rewards={rewards_str}",
         )
     mean_reward = sum(rewards) / len(rewards) if rewards else 0.0
     mean_reward = max(0.01, min(0.99, mean_reward))

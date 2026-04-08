@@ -203,20 +203,55 @@ pip install -r requirements.txt
 uvicorn server.app:app --reload --port 7860
 
 # Run baseline inference
+
+# Set environment variables
+
+# Linux / macOS (bash / zsh)
+
 export HF_TOKEN=your_token
 export MODEL_NAME=Qwen/Qwen2.5-72B-Instruct
 export API_BASE_URL=https://router.huggingface.co/v1
+
+# Windows (PowerShell)
+
+$env:HF_TOKEN="your_token"
+$env:MODEL_NAME="Qwen/Qwen2.5-72B-Instruct"
+$env:API_BASE_URL="https://router.huggingface.co/v1"
+
+# Windows (Command Prompt - CMD)
+
+set HF_TOKEN=your_token
+set MODEL_NAME=Qwen/Qwen2.5-72B-Instruct
+set API_BASE_URL=https://router.huggingface.co/v1
+
+# Run inference
+
 python inference.py
 ```
 
 ### Docker
 
 ```bash
+# Build container
+
 docker build -t socialmodenv .
+
+# Run container
+
+# Linux / macOS (bash / zsh)
+
 docker run -p 7860:7860 \
   -e HF_TOKEN=$HF_TOKEN \
   -e MODEL_NAME=$MODEL_NAME \
   -e API_BASE_URL=$API_BASE_URL \
+  socialmodenv
+
+# Windows (PowerShell)
+
+docker run -p 7860:7860 `
+  -e HF_TOKEN=$env:HF_TOKEN `
+  -e MODEL_NAME=$env:MODEL_NAME `
+  -e API_BASE_URL=$env:API_BASE_URL `
   socialmodenv
 ```
 
@@ -230,6 +265,8 @@ docker run -p 7860:7860 \
 - GET /health
 
 ```bash
+# Linux / macOS (bash / zsh)
+
 # Reset task
 curl -X POST http://localhost:7860/reset \
   -H "Content-Type: application/json" \
@@ -239,6 +276,20 @@ curl -X POST http://localhost:7860/reset \
 curl -X POST http://localhost:7860/step \
   -H "Content-Type: application/json" \
   -d '{"task_name": "spam_triage", "post_id": "t1_spam_0", "action": "remove", "reason": "clear spam"}'
+
+# Get state
+curl http://localhost:7860/state?task_name=spam_triage
+
+# List tasks
+curl http://localhost:7860/tasks
+
+# Windows (PowerShell)
+
+# Reset task
+curl -X POST http://localhost:7860/reset -H "Content-Type: application/json" -d '{"task_name": "spam_triage", "seed": 42}'
+
+# Take a step
+curl -X POST http://localhost:7860/step -H "Content-Type: application/json" -d '{"task_name": "spam_triage", "post_id": "t1_spam_0", "action": "remove", "reason": "clear spam"}'
 
 # Get state
 curl http://localhost:7860/state?task_name=spam_triage
