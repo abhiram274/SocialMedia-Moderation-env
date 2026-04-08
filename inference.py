@@ -532,7 +532,6 @@ def run_task(task_name: str) -> dict:
  
             act_str = action.action if isinstance(action.action, str) else action.action.value
             next_obs, reward, done, info = env.step(action)
-            reward = max(0.01, min(0.99, reward))
             obs_dict = next_obs.model_dump()
             steps += 1
             rewards.append(reward)
@@ -551,7 +550,7 @@ def run_task(task_name: str) -> dict:
     finally:
         # stdout: [END] — always emitted even on exception
         avg = sum(rewards) / len(rewards) if rewards else 0.0
-        avg = max(0.01, min(0.99, avg))
+        avg = max(1e-6, min(avg, 1 - 1e-6))
         success = avg >= 0.6
         rewards_str = ",".join(f"{r:.2f}" for r in rewards) if rewards else "0.00"
         print(

@@ -17,8 +17,8 @@ from typing import Any, Dict, List, Optional, Tuple
 from pydantic import BaseModel, Field
 
 # Utility Functions
-MIN_SCORE = 0.01
-MAX_SCORE = 0.99
+MIN_SCORE = 1e-6
+MAX_SCORE = 1 - 1e-6
 def clamp_score(score: float) -> float:
     return max(MIN_SCORE, min(MAX_SCORE, score))
 
@@ -292,21 +292,21 @@ class Task1SpamTriage:
 
         if gt in ("remove", "demote"):
             if a in ("remove", "demote"):
-                return clamp_score(1.0), "correct: spam actioned"
+                return 1.0, "correct: spam actioned"
             elif a == "escalate":
-                return clamp_score(0.5), "partial: escalated instead of actioning"
+                return 0.5, "partial: escalated instead of actioning"
             else:
-                return clamp_score(0.0), "incorrect: spam allowed"
+                return 0.0, "incorrect: spam allowed"
         elif gt == "allow":
             if a == "allow":
-                return clamp_score(1.0), "correct: legit content allowed"
+                return 1.0, "correct: legit content allowed"
             elif a == "label":
-                return clamp_score(0.7), "partial: unnecessary label on clean content"
+                return 0.7, "partial: unnecessary label on clean content"
             elif a == "demote":
-                return clamp_score(0.3), "over-removal: legitimate post demoted"
+                return 0.3, "over-removal: legitimate post demoted"
             else:
-                return clamp_score(0.0), "over-removal: legitimate post removed"
-        return clamp_score(0.5), "unclear case"
+                return 0.0, "over-removal: legitimate post removed"
+        return 0.5, "unclear case"
 
 
 class Task2PolicyNuance:
@@ -464,15 +464,15 @@ class Task2PolicyNuance:
         for p in self.NUANCE_POSTS:
             if p["content"].strip() == post.content.strip():
                 if a in p["gold_actions"]:
-                    return clamp_score(1.0), f"correct: {p['note']}"
+                    return 1.0, f"correct: {p['note']}"
                 elif a in p["partial_actions"]:
-                    return clamp_score(0.5), f"partial credit: near-miss. {p['note']}"
+                    return 0.5, f"partial credit: near-miss. {p['note']}"
                 else:
-                    return clamp_score(0.0), f"incorrect. {p['note']}"
+                    return 0.0, f"incorrect. {p['note']}"
         # Fallback
         if a == post.ground_truth:
-            return clamp_score(1.0), "correct"
-        return clamp_score(0.0), "incorrect"
+            return 1.0, "correct"
+        return 0.0, "incorrect"
 
 
 class Task3CoordinatedInauthentic:
@@ -525,29 +525,29 @@ class Task3CoordinatedInauthentic:
         if post.network_cluster:
             # This is a CIB post
             if a == "ban_network":
-                return clamp_score(1.0), "correct: network-level action on CIB post"
+                return 1.0, "correct: network-level action on CIB post"
             elif a == "remove":
-                return clamp_score(0.4), "partial: removed post but missed network pattern"
+                return 0.4, "partial: removed post but missed network pattern"
             elif a in ("demote", "label"):
-                return clamp_score(0.2), "partial: weak action on CIB post"
+                return 0.2, "partial: weak action on CIB post"
             elif a == "escalate":
-                return clamp_score(0.5), "partial: escalated — appropriate but BAN_NETWORK preferred"
+                return 0.5, "partial: escalated — appropriate but BAN_NETWORK preferred"
             else:
-                return clamp_score(0.0), "incorrect: CIB post allowed"
+                return 0.0, "incorrect: CIB post allowed"
         else:
             # Organic post — check if agent is trigger-happy with BAN_NETWORK
             gt = post.ground_truth or "allow"
             if a == "ban_network":
-                return clamp_score(0.0), "false positive: BAN_NETWORK on organic content"
+                return 0.0, "false positive: BAN_NETWORK on organic content"
             if a == gt:
-                return clamp_score(1.0), "correct: organic post handled correctly"
+                return 1.0, "correct: organic post handled correctly"
             elif a in ("label", "demote") and gt == "allow":
-                return clamp_score(0.4), "over-cautious but not catastrophic"
+                return 0.4, "over-cautious but not catastrophic"
             elif a == "allow" and gt in ("remove", "demote"):
-                return clamp_score(0.0), "missed violation"
+                return 0.0, "missed violation"
             elif a == "remove" and gt == "allow":
-                return clamp_score(0.0), "false positive: legitimate content removed"
-            return clamp_score(0.5), "borderline case"
+                return 0.0, "false positive: legitimate content removed"
+            return 0.5, "borderline case"
 
 
 # ─────────────────────────────────────────────
@@ -606,7 +606,6 @@ class SocialModEnv:
 
         # Grade the action
         reward_val, reason = self._grade(current_post, action)
-        reward_val = clamp_score(reward_val)
 
         # Consistency penalty — same post_type getting wildly different actions
         consistency_penalty = self._compute_consistency_penalty(action)
@@ -637,7 +636,6 @@ class SocialModEnv:
             "episode_mean_reward": clamp_score(sum(self._episode_scores) / len(self._episode_scores)),
         }
         
-        shaped = clamp_score(shaped)
         return obs, shaped, self._done, info
 
     def state(self) -> Dict[str, Any]:
@@ -700,7 +698,7 @@ class SocialModEnv:
             return self.task.grade_action(post, act)
         elif self.task_name == "coordinated_inauthentic":
             return self.task.grade_action(post, act, self._action_history)
-        return clamp_score(0.0), "unknown task"
+        return 0.0, "unknown task"
 
     def _compute_consistency_penalty(self, action: Action) -> float:
         """
@@ -708,7 +706,7 @@ class SocialModEnv:
         If the same author_type was actioned differently before, apply a small penalty.
         """
         if len(self._action_history) < 3:
-            return clamp_score(0.0)
+            return 0.0  # not enough history for consistency check
 
         current_post = self._posts[self._step_idx]
         author_type = current_post.metadata.get("author_type", "unknown")
@@ -726,7 +724,7 @@ class SocialModEnv:
                     past_actions_for_type.append(past_act)
 
         if not past_actions_for_type:
-            return clamp_score(0.0)
+            return 0.0
 
         current_act = action.action
         if isinstance(current_act, ModerationAction):
@@ -734,9 +732,9 @@ class SocialModEnv:
 
         # If current action differs from past actions for same post type → small penalty
         if current_act not in past_actions_for_type:
-            return clamp_score(0.05)
+            return 0.05
 
-        return clamp_score(0.0)
+        return 0.0
 
     def _shape_reward(self, base: float, post: Post, action: Action,
                       consistency_penalty: float) -> float:
@@ -788,5 +786,5 @@ class SocialModEnv:
             - lazy_penalty
         )
 
-        shaped = max(MIN_SCORE, min(MAX_SCORE, shaped))
-        return round(shaped, 4)
+        shaped = clamp_score(shaped)
+        return float(f"{shaped:.6f}")
