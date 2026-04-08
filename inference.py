@@ -552,7 +552,7 @@ def run_task(task_name: str) -> dict:
         avg = sum(rewards) / len(rewards) if rewards else 0.0
         avg = max(1e-6, min(avg, 1 - 1e-6))
         success = avg >= 0.6
-        rewards_str = ",".join(f"{r:.2f}" for r in rewards) if rewards else "0.00"
+        rewards_str = ",".join(f"{r:.6f}" for r in rewards) if rewards else f"{1e-6:.6f}"
         print(
             f"[END] success={str(success).lower()} steps={steps} rewards={rewards_str}",
             flush=True,
